@@ -1,15 +1,30 @@
 import { SHA256 } from "crypto-js";
 
+class Transaction {
+    fromAddress: string;
+    toAddress: string;
+    amount: number;
+    constructor(fromAddress: string, toAddress: string, amount: number) {
+        this.fromAddress = fromAddress;
+        this.toAddress = toAddress;
+        this.amount = amount;
+    }
+}
+
 class Block {
     createdDate: Date;
-    data: any;
+    transactions: Transaction[];
     hash: string;
     prevHash: string;
     nonce: number;
 
-    constructor(createdDate: Date, data: any, prevHash: string = "") {
+    constructor(
+        createdDate: Date,
+        transactions: Transaction[],
+        prevHash: string = ""
+    ) {
         this.createdDate = createdDate;
-        this.data = data;
+        this.transactions = transactions;
         this.prevHash = prevHash;
         this.hash = this.calculateHash();
         this.nonce = 0; // Mỗi lần hash lại ta cần có 1 giá trị thay đổi để kết quả hash khác nhau
@@ -19,7 +34,7 @@ class Block {
         return SHA256(
             this.createdDate +
                 this.prevHash +
-                JSON.stringify(this.data) +
+                JSON.stringify(this.transactions) +
                 this.nonce
         ).toString();
     }
@@ -42,14 +57,52 @@ class Block {
 class BlockChain {
     difficulty: number;
     chain: Block[];
+    pendingTransactions: Transaction[];
+    miningReward: number;
 
     constructor() {
         this.chain = [this.createGenesisBlock()];
-        this.difficulty = 5;
+        this.difficulty = 2;
+        this.miningReward = 100;
+        this.pendingTransactions = [];
+    }
+
+    minePedingTransactions(miningRewardAddress: string) {
+        let block = new Block(new Date(), this.pendingTransactions);
+        block.mineBlock(this.difficulty);
+
+        console.log("Block successful mined!");
+        this.chain.push(block);
+        this.pendingTransactions = [
+            new Transaction("", miningRewardAddress, this.miningReward),
+        ];
+    }
+
+    createTransaction(transaction: Transaction) {
+        this.pendingTransactions.push(transaction);
+    }
+
+    // In reality, we don't really have a wallet balance
+    // All transactions is stored in block
+    // If someone ask for balance, we have to go through all transactions
+    // that involve their address and calculate the balance
+    getBalaceOfAddress(address: string) {
+        let balance = 0;
+        for (const block of this.chain) {
+            for (const trans of block.transactions) {
+                if (trans.fromAddress === address) {
+                    balance -= trans.amount;
+                }
+                if (trans.toAddress == address) {
+                    balance += trans.amount;
+                }
+            }
+        }
+        return balance;
     }
 
     createGenesisBlock() {
-        return new Block(new Date(), "test");
+        return new Block(new Date(), []);
     }
 
     getLatestBlock() {
@@ -75,8 +128,27 @@ class BlockChain {
 }
 
 let CCH_coin = new BlockChain();
-console.log("Mining block 1 ...");
-CCH_coin.addBlock(new Block(new Date(), "Block 1"));
 
-console.log("Mining block 2 ...");
-CCH_coin.addBlock(new Block(new Date(), "Block 2"));
+CCH_coin.createTransaction(new Transaction("address1", "address2", 100));
+CCH_coin.createTransaction(new Transaction("address2", "address1", 900));
+
+console.log("Starting mining ...");
+CCH_coin.minePedingTransactions("admin-address");
+
+console.log("Starting mining again ...");
+CCH_coin.minePedingTransactions("admin-address");
+
+console.log("Starting mining again ...");
+CCH_coin.minePedingTransactions("admin-address2");
+
+console.log("Starting mining again ...");
+CCH_coin.minePedingTransactions("admin-address");
+
+console.log(
+    "Balance of admin address",
+    CCH_coin.getBalaceOfAddress("admin-address")
+);
+
+console.log("Balance of address1", CCH_coin.getBalaceOfAddress("address1"));
+console.log("Balance of address2", CCH_coin.getBalaceOfAddress("address2"));
+console.log(CCH_coin.chain[1]);
