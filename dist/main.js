@@ -7,14 +7,29 @@ class Block {
         this.data = data;
         this.prevHash = prevHash;
         this.hash = this.calculateHash();
+        this.nonce = 0;
     }
     calculateHash() {
-        return (0, crypto_js_1.SHA256)(this.createdDate + this.prevHash + JSON.stringify(this.data)).toString();
+        return (0, crypto_js_1.SHA256)(this.createdDate +
+            this.prevHash +
+            JSON.stringify(this.data) +
+            this.nonce).toString();
+    }
+    // What if user create new block continuously?
+    // Then we have a solution call Mine. Wait the hash algorithm return a predefine string
+    mineBlock(difficulty) {
+        while (this.hash.substring(0, difficulty) !==
+            Array(difficulty + 1).join("0")) {
+            this.nonce++;
+            this.hash = this.calculateHash();
+        }
+        console.log("Block mined: " + this.hash);
     }
 }
 class BlockChain {
     constructor() {
         this.chain = [this.createGenesisBlock()];
+        this.difficulty = 5;
     }
     createGenesisBlock() {
         return new Block(new Date(), "test");
@@ -24,7 +39,7 @@ class BlockChain {
     }
     addBlock(newBlock) {
         newBlock.prevHash = this.getLatestBlock().hash;
-        newBlock.hash = newBlock.calculateHash();
+        newBlock.mineBlock(this.difficulty);
         this.chain.push(newBlock);
     }
     isChainValid() {
@@ -40,14 +55,7 @@ class BlockChain {
     }
 }
 let CCH_coin = new BlockChain();
-CCH_coin.addBlock(new Block(new Date(), "cao chi hai"));
-CCH_coin.addBlock(new Block(new Date(), "abc xyz"));
-CCH_coin.addBlock(new Block(new Date(), "abc xyz"));
-console.log(CCH_coin);
-console.log("Is blockchain valid? ", CCH_coin.isChainValid());
-// Change data of a block in blockchain
-CCH_coin.chain[1].data = "change";
-console.log("Is blockchain valid? ", CCH_coin.isChainValid());
-CCH_coin.chain[2].data = "change";
-CCH_coin.chain[2].hash = CCH_coin.chain[2].calculateHash();
-console.log("Is blockchain valid? ", CCH_coin.isChainValid());
+console.log("Mining block 1 ...");
+CCH_coin.addBlock(new Block(new Date(), "Block 1"));
+console.log("Mining block 2 ...");
+CCH_coin.addBlock(new Block(new Date(), "Block 2"));
